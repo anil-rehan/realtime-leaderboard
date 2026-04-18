@@ -1,0 +1,160 @@
+# Realtime Leaderboard
+
+A realtime leaderboard system built with Kotlin, Flow, and Jetpack Compose.
+
+Focuses on deterministic ranking, continuous state propagation, and clear separation between domain, data, and UI layers.
+
+## What this demonstrates
+
+- handling continuous event streams using Kotlin Flow
+- deterministic ranking under concurrent updates
+- separation of domain, data, and presentation layers
+- testable business logic independent of Android framework
+
+## Data Flow
+
+ScoreEventSource
+↓
+LeaderboardRepository
+↓
+RankingEngine
+↓
+LeaderboardCoordinator
+↓
+LeaderboardViewModel
+↓
+Compose UI
+
+Each layer has a single responsibility and communicates through immutable state.
+
+## Project Structure
+
+### score-engine
+
+Produces score updates.
+
+- Player model
+- Score update events
+- ScoreEventSource emitting a continuous stream
+
+### leaderboard
+
+Contains domain logic and state transformation.
+
+**LeaderboardRepository**
+
+Maintains score state and applies updates.
+
+**RankingEngine**
+
+- sorts players by score
+- assigns ranks
+- handles ties
+- detects rank movement
+
+Deterministic and side-effect free.
+
+**LeaderboardCoordinator**
+
+Orchestrates:
+
+ScoreEventSource → Repository → RankingEngine → Snapshot Flow
+
+Produces:
+
+StateFlow<LeaderboardSnapshot>
+
+### app
+
+Android presentation layer.
+
+**LeaderboardViewModel**
+
+Maps domain snapshot to UI state.
+
+Exposes:
+
+StateFlow<LeaderboardUiState>
+
+**Compose UI**
+
+Observes state and reacts to updates.
+
+## Ranking Behaviour
+
+Ranking is based on:
+
+1. score (descending)
+2. username (ascending) for tie-breaking
+
+Players with equal scores share rank.
+
+Rank movement is derived from consecutive snapshots:
+
+- UP
+- DOWN
+- NONE
+
+## Failure scenarios considered
+
+- rapid consecutive updates
+- concurrent mutations
+- duplicate or overlapping events
+- rank instability under frequent updates
+
+Ranking remains deterministic regardless of event ordering.
+
+## Testing Strategy
+
+**RankingEngineTest**
+
+- sorting
+- rank assignment
+- tie handling
+- rank movement
+
+**LeaderboardCoordinatorTest**
+
+- verifies pipeline interaction
+- ensures correct snapshot propagation
+
+**LeaderboardViewModelTest**
+
+- validates mapping to UI state
+
+## Design Decisions
+
+**StateFlow**
+
+Represents continuous state and exposes latest snapshot to collectors.
+
+**Coordinator layer**
+
+Separates orchestration from domain and UI.
+
+**Pure ranking engine**
+
+No Android or coroutine dependencies. Fully deterministic and testable.
+
+## Trade-offs
+
+- in-memory ranking for simplicity
+- full sorting per update over incremental optimization
+- coordinator layer adds structure at the cost of an extra abstraction
+
+## How to read this repository
+
+1. Start with data flow
+2. Review RankingEngine
+3. Explore LeaderboardCoordinator
+4. Check ViewModel mapping
+
+## Running the project
+
+Open in Android Studio and run on device/emulator.
+Score updates are generated automatically.
+
+## Running tests
+
+```bash
+./gradlew test
